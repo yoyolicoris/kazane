@@ -19,10 +19,7 @@ def _smooth_even(n: int) -> int:
 
 
 def _next_pow2(n: int) -> int:
-    m = 2
-    while m < n:
-        m = m * 2
-    return m
+    return 1 << (max(n, 2) - 1).bit_length()
 
 
 def _kernel_spectrum(weight: Tensor, s: int) -> Tensor:
