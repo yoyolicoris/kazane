@@ -5,11 +5,6 @@ on:
     branches: [master]
   pull_request:
 
-env:
-  # pixi.toml requires a CUDA virtual package for the `cuda` environment;
-  # runners have no GPU, so declare one for dependency resolution only.
-  CONDA_OVERRIDE_CUDA: "13"
-
 jobs:
   lint:
     runs-on: ubuntu-latest
