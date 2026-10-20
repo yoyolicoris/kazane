@@ -36,7 +36,7 @@ class Decimate(nn.Module):
     Shape:
         - Input: :math:`(*, T)` where :math:`*` means any number of
           dimensions including none.
-        - Output: :math:`(*, T / q)`, for :math:`T` divisible by :math:`q`.
+        - Output: :math:`(*, \left\lfloor T / q \right\rfloor)`.
 
     Examples::
 
@@ -89,6 +89,8 @@ class Decimate(nn.Module):
 
     def forward(self, x: torch.Tensor):
         shape = x.shape
+        if shape[-1] < 2:
+            raise ValueError(f'input needs at least 2 samples, got {shape[-1]}')
         x = x.reshape(-1, shape[-1])
         batch = x.shape[0]
 
@@ -101,5 +103,5 @@ class Decimate(nn.Module):
             y = _fft_conv1d_with_spectrum(
                 x.reshape(-1, 1, x.shape[-1]), W, self.fft_size, self.kernel.shape[-1], self.stride
             )
-            y = y.reshape(batch, -1)[:, : shape[-1] // self.stride]
+        y = y.reshape(batch, -1)[:, : shape[-1] // self.stride]
         return y.reshape(shape[:-1] + (-1,))

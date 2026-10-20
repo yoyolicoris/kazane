@@ -87,6 +87,8 @@ class Upsample(nn.Module):
 
     def forward(self, x: torch.Tensor):
         shape = x.shape
+        if shape[-1] < 2:
+            raise ValueError(f'input needs at least 2 samples, got {shape[-1]}')
         x = x.reshape(-1, shape[-1])
         batch = x.shape[0]
 

@@ -3526,7 +3526,7 @@ packages:
 - pypi: ./
   name: kazane
   requires_dist:
-  - torch
+  - torch>=2.4
   requires_python: '>=3.11'
 - pypi: https://files.pythonhosted.org/packages/86/43/efdb0bcb07c47826fa55857cec0deb743f74cd83b6ba5ec9e413505a72e6/julius-0.2.8-py3-none-any.whl
   name: julius

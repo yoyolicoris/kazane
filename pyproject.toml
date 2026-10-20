@@ -19,7 +19,8 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
     "Operating System :: OS Independent",
 ]
-dependencies = ["torch"]
+# Oldest torch the test suite has been run against
+dependencies = ["torch>=2.4"]
 
 [project.urls]
 Homepage = "https://github.com/yoyolicoris/kazane"

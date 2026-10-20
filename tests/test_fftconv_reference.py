@@ -51,10 +51,9 @@ def test_decimate_matches_reference(q):
             y = m(x)
             ref = ref_decimate(m, x)
             assert y.shape[:-1] == x.shape[:-1]
-            assert y.shape[-1] >= T // q
+            assert y.shape[-1] == T // q
             y = y.reshape(-1, y.shape[-1])
-            n = y.shape[-1]
-            err = (y - ref[..., :n]).abs().max().item()
+            err = (y - ref[..., : T // q]).abs().max().item()
             assert err < TOL, f'q={q} T={T} shape={tuple(x.shape)}: {err:g}'
 
 
@@ -94,3 +93,10 @@ def test_load_state_dict_refreshes_spectrum(cls):
     for T in (50, 2 * src.block_length):
         x = torch.randn(2, T)
         torch.testing.assert_close(dst(x), src(x))
+
+
+@pytest.mark.parametrize('cls', [Decimate, Upsample])
+@pytest.mark.parametrize('T', [0, 1])
+def test_too_short_input_raises(cls, T):
+    with pytest.raises(ValueError, match='at least 2 samples'):
+        cls(2)(torch.randn(3, T))
