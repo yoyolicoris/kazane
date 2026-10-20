@@ -78,11 +78,14 @@ class Decimate(nn.Module):
         self.fft_size = q * _next_pow2(per_phase * self.BLOCK_RATIO)
         self.block_length = self.fft_size - 2 * self.padding
         # stored as real [P, F, 2] so that .to(dtype) keeps the imaginary part
-        self.register_buffer(
-            'kernel_spectrum',
-            torch.view_as_real(_kernel_spectrum(self.kernel, self.fft_size)),
-            persistent=False,
-        )
+        self.register_buffer('kernel_spectrum', None, persistent=False)
+        self._refresh_spectrum()
+        self.register_load_state_dict_post_hook(self._refresh_spectrum)
+
+    def _refresh_spectrum(self, *_):
+        # the cached spectrum is not in the state dict, so rebuild it from `kernel`
+        spectrum = torch.view_as_real(_kernel_spectrum(self.kernel, self.fft_size))
+        self.kernel_spectrum = spectrum
 
     def forward(self, x: torch.Tensor):
         shape = x.shape

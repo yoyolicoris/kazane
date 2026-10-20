@@ -86,7 +86,11 @@ def test_double(cls, ref, q):
 
 
 @pytest.mark.parametrize('cls', [Decimate, Upsample])
-def test_state_dict_has_no_spectrum(cls):
-    m = cls(2)
-    assert list(m.state_dict().keys()) == ['kernel']
-    cls(2).load_state_dict(m.state_dict())
+def test_load_state_dict_refreshes_spectrum(cls):
+    src, dst = cls(2, roll_off=0.8), cls(2)
+    assert list(src.state_dict().keys()) == ['kernel']
+    dst.load_state_dict(src.state_dict())
+    # one input on each side of the short/long threshold
+    for T in (50, 2 * src.block_length):
+        x = torch.randn(2, T)
+        torch.testing.assert_close(dst(x), src(x))
