@@ -1,9 +1,10 @@
-import torch
-from kazane import Decimate
-from julius import ResampleFrac
-from torch.profiler import profiler
-from torch.utils.benchmark import Timer, Compare
 import argparse
+
+import torch
+from julius import ResampleFrac
+from torch.utils.benchmark import Compare, Timer
+
+from kazane import Decimate
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

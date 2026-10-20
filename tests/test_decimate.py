@@ -1,7 +1,9 @@
-from kazane import Decimate
-import torch
+from math import log2, pi
+
 import pytest
-from math import pi, log2
+import torch
+
+from kazane import Decimate
 
 device = 'cpu'
 dtype = torch.float64
@@ -29,7 +31,7 @@ def test_quality_sine(q, zeros, rms):
     DURATION = 2
     sr = 44100
     sr_new = sr // q
-    dec = torch.jit.script(Decimate(q, zeros, roll_off=0.945)).to(dtype)
+    dec = Decimate(q, zeros, roll_off=0.945).to(dtype)
 
     x = make_tone(FREQ, sr, DURATION)
     y = make_tone(FREQ, sr_new, DURATION)
@@ -38,7 +40,7 @@ def test_quality_sine(q, zeros, rms):
     idx = slice(sr_new // 2, - sr_new // 2)
 
     err = torch.mean(torch.abs(y[idx] - y_pred[idx])).item()
-    assert err <= rms, '{:g} > {:g}'.format(err, rms)
+    assert err <= rms, f'{err:g} > {rms:g}'
 
 
 @pytest.mark.parametrize('q', [2, 3])
@@ -52,7 +54,7 @@ def test_quality_sweep(q, zeros, rms):
     DURATION = 5
     sr = 44100
     sr_new = sr // q
-    dec = torch.jit.script(Decimate(q, zeros, roll_off=0.945)).to(dtype)
+    dec = Decimate(q, zeros, roll_off=0.945).to(dtype)
 
     x = make_sweep(FREQ, sr, DURATION)
     y = make_sweep(FREQ, sr_new, DURATION)
@@ -61,10 +63,10 @@ def test_quality_sweep(q, zeros, rms):
     idx = slice(sr_new // 2, - sr_new // 2)
 
     err = torch.mean(torch.abs(y[idx] - y_pred[idx])).item()
-    assert err <= rms, '{:g} > {:g}'.format(err, rms)
+    assert err <= rms, f'{err:g} > {rms:g}'
 
 
 def test_short_input():
     decimater = Decimate(4)
     x = torch.randn(8)
-    y = decimater(x)
+    decimater(x)

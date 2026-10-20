@@ -1,6 +1,7 @@
-from kazane.upsample import _pad_to_block_2
 import pytest
 import torch
+
+from kazane.upsample import _pad_to_block_2
 
 
 @pytest.mark.parametrize('x_shape', [

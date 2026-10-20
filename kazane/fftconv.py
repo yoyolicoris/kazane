@@ -1,29 +1,50 @@
 import torch
-from torch import Tensor
 import torch.nn.functional as F
-from torch.fft import rfft, irfft
+from torch import Tensor
+from torch.fft import irfft, rfft
 
 
-def _custom_fft_conv1d(input: Tensor, weight: Tensor,
-                       stride: int = 1) -> Tensor:
-    weight = weight.view(-1, weight.shape[-1])
-    output_size = (input.shape[-1] - 1 *
-                   (weight.shape[-1] - 1) - 1) // stride + 1
+def _smooth_even(n: int) -> int:
+    # Smallest even 2/3/5-smooth integer >= n
+    m = max(n, 2)
+    m += m % 2
+    while True:
+        k = m
+        for p in (2, 3, 5):
+            while k % p == 0:
+                k //= p
+        if k == 1:
+            return m
+        m += 2
 
-    s = max(input.shape[-1], weight.shape[-1])
-    if stride % 2:
-        factor = stride * 2
-    else:
-        factor = stride
 
-    offset = s % factor
-    if offset:
-        s += factor - offset
+def _next_pow2(n: int) -> int:
+    m = 2
+    while m < n:
+        m = m * 2
+    return m
 
-    X = rfft(input, n=s)
+
+def _fft_size(length: int, stride: int) -> int:
+    # FFT length s >= length with s % (2 * stride) == 0 and s // stride smooth
+    return stride * _smooth_even((length + stride - 1) // stride)
+
+
+def _kernel_spectrum(weight: Tensor, s: int) -> Tensor:
+    # Conjugated spectrum of the kernel(s), shape [-1, s // 2 + 1]
+    weight = weight.reshape(-1, weight.shape[-1])
     W = rfft(weight, n=s)
     # W.imag.mul_(-1)
     torch.view_as_real(W)[..., 1].mul_(-1)
+    return W
+
+
+def _fft_conv1d_with_spectrum(input: Tensor, W: Tensor, s: int,
+                              kernel_len: int, stride: int = 1) -> Tensor:
+    # s % (2 * stride) == 0 and input.shape[-1] <= s are required
+    output_size = (input.shape[-1] - (kernel_len - 1) - 1) // stride + 1
+
+    X = rfft(input, n=s)
     Y = X * W
 
     # handle stride
@@ -51,8 +72,16 @@ def _custom_fft_conv1d(input: Tensor, weight: Tensor,
         Y = torch.view_as_complex(
             torch.stack((Y_real, Y_imag), -1)).div_(stride)
 
-    output = irfft(Y)
+    output = irfft(Y, n=s // stride)
 
     # Remove extra padded values
     output = output[..., :output_size].contiguous()
     return output
+
+
+def _custom_fft_conv1d(input: Tensor, weight: Tensor,
+                       stride: int = 1) -> Tensor:
+    kernel_len = weight.shape[-1]
+    s = _fft_size(max(input.shape[-1], kernel_len), stride)
+    W = _kernel_spectrum(weight, s)
+    return _fft_conv1d_with_spectrum(input, W, s, kernel_len, stride)
