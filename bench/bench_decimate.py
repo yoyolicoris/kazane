@@ -1,9 +1,10 @@
-import torch
-from kazane import Decimate
-from julius import ResampleFrac
-from torch.profiler import profiler
-from torch.utils.benchmark import Timer, Compare
 import argparse
+
+import torch
+from julius import ResampleFrac
+from torch.utils.benchmark import Compare, Timer
+
+from kazane import Decimate
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -27,24 +28,28 @@ if __name__ == '__main__':
         label = 'Down sample'
         sub_label = f'rate: {q}'
 
-        results.append(Timer(
-            stmt='m(x)',
-            setup='',
-            globals={'x': x, 'm': ResampleFrac(q, 1, zeros).to(device)},
-            num_threads=num_threads,
-            label=label,
-            sub_label=sub_label,
-            description='julius',
-        ).blocked_autorange(min_run_time=1))
-        results.append(Timer(
-            stmt='m(x)',
-            setup='',
-            globals={'x': x, 'm': Decimate(q, zeros).to(device)},
-            num_threads=num_threads,
-            label=label,
-            sub_label=sub_label,
-            description='kazane',
-        ).blocked_autorange(min_run_time=1))
+        results.append(
+            Timer(
+                stmt='m(x)',
+                setup='',
+                globals={'x': x, 'm': ResampleFrac(q, 1, zeros).to(device)},
+                num_threads=num_threads,
+                label=label,
+                sub_label=sub_label,
+                description='julius',
+            ).blocked_autorange(min_run_time=1)
+        )
+        results.append(
+            Timer(
+                stmt='m(x)',
+                setup='',
+                globals={'x': x, 'm': Decimate(q, zeros).to(device)},
+                num_threads=num_threads,
+                label=label,
+                sub_label=sub_label,
+                description='kazane',
+            ).blocked_autorange(min_run_time=1)
+        )
 
     compare = Compare(results)
     compare.print()

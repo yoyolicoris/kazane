@@ -1,0 +1,127 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "kazane"
+dynamic = ["version"]
+description = "Fast sinc interpolation for 1D signals in PyTorch using FFT convolution"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Chin-Yun Yu", email = "chin-yun.yu@qmul.ac.uk" }]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: OS Independent",
+]
+# Oldest torch the test suite has been run against
+dependencies = ["torch>=2.4"]
+
+[project.urls]
+Homepage = "https://github.com/yoyolicoris/kazane"
+Repository = "https://github.com/yoyolicoris/kazane"
+
+# The git tag is the single source of truth for the version: `git tag v1.1.0`,
+# and hatch-vcs derives it at build time (needs full history, incl. tags).
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["kazane"]
+
+[tool.hatch.build.targets.sdist]
+include = ["kazane", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source_pkgs = ["kazane"]
+
+[tool.coverage.report]
+fail_under = 100
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.ruff.lint.isort]
+known-local-folder = ["helpers"]
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64", { name = "linux-64-cuda", platform = "linux-64", cuda = "13" }]
+
+[tool.pixi.dependencies]
+python = ">=3.11,<3.15"
+
+[tool.pixi.pypi-dependencies]
+kazane = { path = ".", editable = true }
+
+[tool.pixi.feature.cpu.dependencies]
+pytorch-cpu = "*"
+
+[tool.pixi.feature.cuda]
+platforms = ["linux-64-cuda"]
+
+[tool.pixi.feature.cuda.dependencies]
+pytorch-gpu = "*"
+cuda-version = ">=13.0,<14"
+
+[tool.pixi.feature.test.dependencies]
+pytest = "*"
+pytest-cov = "*"
+
+[tool.pixi.feature.dev.dependencies]
+ruff = "*"
+python-build = "*"
+
+[tool.pixi.feature.bench.pypi-dependencies]
+julius = "*"
+
+# One feature per supported interpreter, so CI can run the suite across the
+# whole `requires-python` range instead of whatever the solver happens to pick.
+[tool.pixi.feature.py311.dependencies]
+python = "3.11.*"
+
+[tool.pixi.feature.py312.dependencies]
+python = "3.12.*"
+
+[tool.pixi.feature.py313.dependencies]
+python = "3.13.*"
+
+[tool.pixi.feature.py314.dependencies]
+python = "3.14.*"
+
+[tool.pixi.environments]
+default = ["py313", "cpu", "test", "dev"]
+py311 = ["py311", "cpu", "test"]
+py312 = ["py312", "cpu", "test"]
+py313 = ["py313", "cpu", "test"]
+py314 = ["py314", "cpu", "test"]
+bench = ["py313", "cpu", "bench"]
+cuda = ["py313", "cuda", "test", "bench"]
+
+[tool.pixi.tasks]
+test = { cmd = "pytest -v --cov --cov-report=term-missing", description = "Run the tests and enforce 100% branch coverage" }
+lint = { cmd = "ruff check .", description = "Lint with ruff" }
+format = { cmd = "ruff format .", description = "Format with ruff" }
+format-check = { cmd = "ruff format --check .", description = "Fail if any file needs reformatting" }
+build = { cmd = "python -m build", description = "Build sdist and wheel" }
+smoke = { cmd = "python scripts/smoke_wheel.py", description = "Install the built wheel in a clean venv and check its version wiring" }
+
+[tool.pixi.feature.bench.tasks]
+bench-upsample = "python bench/bench_upsample.py"
+bench-decimate = "python bench/bench_decimate.py"

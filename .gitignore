@@ -4,3 +4,12 @@
 /build
 /dist
 *egg-info
+
+# pixi environments
+.pixi/*
+!.pixi/config.toml
+
+# coverage / lint caches
+.coverage
+coverage.xml
+.ruff_cache
