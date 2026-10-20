@@ -50,15 +50,17 @@ class Decimate(nn.Module):
         torch.Size([8, 2, 14700])
 
     """
+
     BLOCK_RATIO: int = 16
 
-    def __init__(self,
-                 q: int = 2,
-                 num_zeros: int = 16,
-                 window_func: Callable[[int],
-                                       torch.Tensor] = torch.hann_window,
-                 **kwargs):
-        assert q > 1, "q should be greater than 1"
+    def __init__(
+        self,
+        q: int = 2,
+        num_zeros: int = 16,
+        window_func: Callable[[int], torch.Tensor] = torch.hann_window,
+        **kwargs,
+    ):
+        assert q > 1, 'q should be greater than 1'
         super().__init__()
         kernel = sinc_kernel(num_zeros, q, **kwargs)
         N = kernel.numel()
@@ -75,10 +77,11 @@ class Decimate(nn.Module):
         self.fft_size = q * _next_pow2(per_phase * self.BLOCK_RATIO)
         self.block_length = self.fft_size - 2 * self.padding
         # stored as real [P, F, 2] so that .to(dtype) keeps the imaginary part
-        self.register_buffer('kernel_spectrum',
-                             torch.view_as_real(
-                                 _kernel_spectrum(self.kernel, self.fft_size)),
-                             persistent=False)
+        self.register_buffer(
+            'kernel_spectrum',
+            torch.view_as_real(_kernel_spectrum(self.kernel, self.fft_size)),
+            persistent=False,
+        )
 
     def forward(self, x: torch.Tensor):
         shape = x.shape
@@ -94,11 +97,7 @@ class Decimate(nn.Module):
             num_blocks = x.shape[-2]
             x = x.reshape(-1, 1, x.shape[-1])
             W = torch.view_as_complex(self.kernel_spectrum)
-            y = _fft_conv1d_with_spectrum(x, W,
-                                          self.fft_size,
-                                          self.kernel.shape[-1],
-                                          self.stride)
+            y = _fft_conv1d_with_spectrum(x, W, self.fft_size, self.kernel.shape[-1], self.stride)
             y = y.view(-1, num_blocks * y.shape[-1])[..., :out_size]
 
         return y.view(shape[:-1] + (-1,))
-

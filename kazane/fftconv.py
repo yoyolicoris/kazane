@@ -39,8 +39,9 @@ def _kernel_spectrum(weight: Tensor, s: int) -> Tensor:
     return W
 
 
-def _fft_conv1d_with_spectrum(input: Tensor, W: Tensor, s: int,
-                              kernel_len: int, stride: int = 1) -> Tensor:
+def _fft_conv1d_with_spectrum(
+    input: Tensor, W: Tensor, s: int, kernel_len: int, stride: int = 1
+) -> Tensor:
     # s % (2 * stride) == 0 and input.shape[-1] <= s are required
     output_size = (input.shape[-1] - (kernel_len - 1) - 1) // stride + 1
 
@@ -58,19 +59,21 @@ def _fft_conv1d_with_spectrum(input: Tensor, W: Tensor, s: int,
         Y_real, Y_imag = tmpY[..., 0], tmpY[..., 1]
 
         unfolded_Y_real = Y_real.unfold(-1, strided_Y_size, step_size)
-        unfolded_Y_imag = Y_imag[...,
-                                 1:].unfold(-1, strided_Y_size - 2, step_size)
-        Y_pos_real, Y_pos_imag = unfolded_Y_real[..., ::2,
-                                                 :].sum(-2), unfolded_Y_imag[..., ::2, :].sum(-2)
-        Y_neg_real, Y_neg_imag = unfolded_Y_real[..., 1::2, :].sum(
-            -2).flip(-1), unfolded_Y_imag[..., 1::2, :].sum(-2).flip(-1)
+        unfolded_Y_imag = Y_imag[..., 1:].unfold(-1, strided_Y_size - 2, step_size)
+        Y_pos_real, Y_pos_imag = (
+            unfolded_Y_real[..., ::2, :].sum(-2),
+            unfolded_Y_imag[..., ::2, :].sum(-2),
+        )
+        Y_neg_real, Y_neg_imag = (
+            unfolded_Y_real[..., 1::2, :].sum(-2).flip(-1),
+            unfolded_Y_imag[..., 1::2, :].sum(-2).flip(-1),
+        )
 
         Y_real = Y_pos_real.add_(Y_neg_real)
         Y_imag = Y_pos_imag.add_(Y_neg_imag, alpha=-1)
         Y_imag = F.pad(Y_imag, [1, 1])
 
-        Y = torch.view_as_complex(
-            torch.stack((Y_real, Y_imag), -1)).div_(stride)
+        Y = torch.view_as_complex(torch.stack((Y_real, Y_imag), -1)).div_(stride)
 
     output = irfft(Y, n=s // stride)
 
@@ -79,8 +82,7 @@ def _fft_conv1d_with_spectrum(input: Tensor, W: Tensor, s: int,
     return output
 
 
-def _custom_fft_conv1d(input: Tensor, weight: Tensor,
-                       stride: int = 1) -> Tensor:
+def _custom_fft_conv1d(input: Tensor, weight: Tensor, stride: int = 1) -> Tensor:
     kernel_len = weight.shape[-1]
     s = _fft_size(max(input.shape[-1], kernel_len), stride)
     W = _kernel_spectrum(weight, s)

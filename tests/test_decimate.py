@@ -14,18 +14,24 @@ def make_tone(freq, sr, duration):
 
 
 def make_sweep(freq, sr, duration):
-    return torch.sin(torch.cumsum(2 * pi * torch.logspace(log2(2.0 / sr),
-                                                          log2(
-                                                              float(freq) / sr),
-                                                          steps=int(duration*sr), base=2.0, dtype=dtype), dim=-1))
+    return torch.sin(
+        torch.cumsum(
+            2
+            * pi
+            * torch.logspace(
+                log2(2.0 / sr),
+                log2(float(freq) / sr),
+                steps=int(duration * sr),
+                base=2.0,
+                dtype=dtype,
+            ),
+            dim=-1,
+        )
+    )
 
 
 @pytest.mark.parametrize('q', [2, 3, 5, 7])
-@pytest.mark.parametrize('zeros,rms', [
-    (64, 2e-4),
-    (32, 2e-4),
-    (16, 4e-4)
-])
+@pytest.mark.parametrize('zeros,rms', [(64, 2e-4), (32, 2e-4), (16, 4e-4)])
 def test_quality_sine(q, zeros, rms):
     FREQ = 512.0
     DURATION = 2
@@ -37,18 +43,14 @@ def test_quality_sine(q, zeros, rms):
     y = make_tone(FREQ, sr_new, DURATION)
     y_pred = dec(x)
 
-    idx = slice(sr_new // 2, - sr_new // 2)
+    idx = slice(sr_new // 2, -sr_new // 2)
 
     err = torch.mean(torch.abs(y[idx] - y_pred[idx])).item()
     assert err <= rms, f'{err:g} > {rms:g}'
 
 
 @pytest.mark.parametrize('q', [2, 3])
-@pytest.mark.parametrize('zeros,rms', [
-    (64, 8e-2),
-    (32, 8e-2),
-    (16, 8e-2)
-])
+@pytest.mark.parametrize('zeros,rms', [(64, 8e-2), (32, 8e-2), (16, 8e-2)])
 def test_quality_sweep(q, zeros, rms):
     FREQ = 4096
     DURATION = 5
@@ -60,7 +62,7 @@ def test_quality_sweep(q, zeros, rms):
     y = make_sweep(FREQ, sr_new, DURATION)
     y_pred = dec(x)
 
-    idx = slice(sr_new // 2, - sr_new // 2)
+    idx = slice(sr_new // 2, -sr_new // 2)
 
     err = torch.mean(torch.abs(y[idx] - y_pred[idx])).item()
     assert err <= rms, f'{err:g} > {rms:g}'

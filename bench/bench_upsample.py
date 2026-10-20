@@ -28,25 +28,28 @@ if __name__ == '__main__':
         label = 'Up sample'
         sub_label = f'rate: {q}'
 
-        results.append(Timer(
-            stmt='m(x)',
-            setup='',
-            globals={'x': x, 'm': ResampleFrac(sr, sr * q, zeros).to(device)},
-            num_threads=num_threads,
-            label=label,
-            sub_label=sub_label,
-            description='julius',
-        ).blocked_autorange(min_run_time=1))
-        results.append(Timer(
-            stmt='m(x)',
-            setup='',
-            globals={'x': x, 'm': Upsample(
-                q, zeros).to(device)},
-            num_threads=num_threads,
-            label=label,
-            sub_label=sub_label,
-            description='kazane',
-        ).blocked_autorange(min_run_time=1))
+        results.append(
+            Timer(
+                stmt='m(x)',
+                setup='',
+                globals={'x': x, 'm': ResampleFrac(sr, sr * q, zeros).to(device)},
+                num_threads=num_threads,
+                label=label,
+                sub_label=sub_label,
+                description='julius',
+            ).blocked_autorange(min_run_time=1)
+        )
+        results.append(
+            Timer(
+                stmt='m(x)',
+                setup='',
+                globals={'x': x, 'm': Upsample(q, zeros).to(device)},
+                num_threads=num_threads,
+                label=label,
+                sub_label=sub_label,
+                description='kazane',
+            ).blocked_autorange(min_run_time=1)
+        )
 
     compare = Compare(results)
     compare.print()

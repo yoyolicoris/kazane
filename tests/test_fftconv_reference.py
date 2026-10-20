@@ -1,4 +1,5 @@
 """Regression sweeps against direct (non-FFT) reference implementations."""
+
 import pytest
 import torch
 import torch.nn.functional as F
@@ -19,8 +20,7 @@ def lengths(block_length):
 
 
 def ref_decimate(m, x):
-    x = _manual_reflect_pad(x.reshape(-1, 1, x.shape[-1]),
-                            (m.padding, m.padding))
+    x = _manual_reflect_pad(x.reshape(-1, 1, x.shape[-1]), (m.padding, m.padding))
     return F.conv1d(x, m.kernel, stride=m.stride)[:, 0]
 
 
@@ -29,11 +29,11 @@ def ref_upsample(m, x):
     # reversed) windowed sinc kernel; y[i * q + c] = full[N - 1 + i * q + c]
     q, pad = m.stride, m.padding
     # polyphase kernel [q, 1, Lp] (flipped over phases) back to a full kernel
-    k = m.kernel.flip(0)[:, 0].t().reshape(-1)[q - 1:]
+    k = m.kernel.flip(0)[:, 0].t().reshape(-1)[q - 1 :]
     x = _manual_reflect_pad(x.reshape(-1, 1, x.shape[-1]), (pad, pad))
     full = F.conv_transpose1d(x, k.flip(-1).view(1, 1, -1), stride=q)[:, 0]
     start = k.numel() - 1
-    return full[..., start:start + (x.shape[-1] - 2 * pad) * q]
+    return full[..., start : start + (x.shape[-1] - 2 * pad) * q]
 
 
 def make_inputs(T):
@@ -70,8 +70,7 @@ def test_upsample_matches_reference(q):
             assert err < TOL, f'q={q} T={T} shape={tuple(x.shape)}: {err:g}'
 
 
-@pytest.mark.parametrize('cls,ref', [(Decimate, ref_decimate),
-                                     (Upsample, ref_upsample)])
+@pytest.mark.parametrize('cls,ref', [(Decimate, ref_decimate), (Upsample, ref_upsample)])
 @pytest.mark.parametrize('q', [2, 3, 4])
 def test_double(cls, ref, q):
     m = cls(q).double()
@@ -82,7 +81,7 @@ def test_double(cls, ref, q):
         assert y.dtype == torch.float64
         r = ref(m, x)
         y = y.reshape(-1, y.shape[-1])
-        err = (y - r[..., :y.shape[-1]]).abs().max().item()
+        err = (y - r[..., : y.shape[-1]]).abs().max().item()
         assert err < 1e-5, f'q={q} T={T}: {err:g}'
 
 
