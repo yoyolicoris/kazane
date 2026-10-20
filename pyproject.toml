@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "kazane"
+dynamic = ["version"]
+description = "Fast sinc interpolation for 1D signals in PyTorch using FFT convolution"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Chin-Yun Yu", email = "chin-yun.yu@qmul.ac.uk" }]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: OS Independent",
+]
+dependencies = ["torch"]
+
+[project.urls]
+Homepage = "https://github.com/yoyolicoris/kazane"
+Repository = "https://github.com/yoyolicoris/kazane"
+
+# The git tag is the single source of truth for the version: `git tag v1.1.0`,
+# and hatch-vcs derives it at build time (needs full history, incl. tags).
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["kazane"]
+
+[tool.hatch.build.targets.sdist]
+include = ["kazane", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source_pkgs = ["kazane"]
+
+[tool.coverage.report]
+fail_under = 100
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+
+[tool.ruff.format]
+quote-style = "single"

@@ -1,0 +1,64 @@
+[workspace]
+name = "kazane"
+authors = ["Chin-Yun Yu <chin-yun.yu@qmul.ac.uk>"]
+channels = ["conda-forge"]
+platforms = [{ platform = "linux-64", cuda = "13" }]
+
+[dependencies]
+python = ">=3.11,<3.15"
+
+[pypi-dependencies]
+kazane = { path = ".", editable = true }
+
+[feature.cpu.dependencies]
+pytorch-cpu = "*"
+
+[feature.cuda.dependencies]
+pytorch-gpu = "*"
+cuda-version = ">=13.0,<14"
+
+[feature.test.dependencies]
+pytest = "*"
+pytest-cov = "*"
+
+[feature.dev.dependencies]
+ruff = "*"
+python-build = "*"
+
+[feature.bench.pypi-dependencies]
+julius = "*"
+
+# One feature per supported interpreter, so CI can run the suite across the
+# whole `requires-python` range instead of whatever the solver happens to pick.
+[feature.py311.dependencies]
+python = "3.11.*"
+
+[feature.py312.dependencies]
+python = "3.12.*"
+
+[feature.py313.dependencies]
+python = "3.13.*"
+
+[feature.py314.dependencies]
+python = "3.14.*"
+
+[environments]
+default = ["py313", "cpu", "test", "dev"]
+py311 = ["py311", "cpu", "test"]
+py312 = ["py312", "cpu", "test"]
+py313 = ["py313", "cpu", "test"]
+py314 = ["py314", "cpu", "test"]
+bench = ["py313", "cpu", "bench"]
+cuda = ["py313", "cuda", "test", "bench"]
+
+[tasks]
+test = { cmd = "pytest -v --cov --cov-report=term-missing", description = "Run the tests and enforce 100% branch coverage" }
+lint = { cmd = "ruff check .", description = "Lint with ruff" }
+format = { cmd = "ruff format .", description = "Format with ruff" }
+format-check = { cmd = "ruff format --check .", description = "Fail if any file needs reformatting" }
+build = { cmd = "python -m build", description = "Build sdist and wheel" }
+smoke = { cmd = "python scripts/smoke_wheel.py", description = "Install the built wheel in a clean venv and check its version wiring" }
+
+[feature.bench.tasks]
+bench-upsample = "python bench/bench_upsample.py"
+bench-decimate = "python bench/bench_decimate.py"

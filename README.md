@@ -1,8 +1,8 @@
 # Kazane: simple sinc interpolation for 1D signal in PyTorch
 
 
-[![build](https://github.com/yoyololicon/kazane/actions/workflows/python-package.yml/badge.svg)](https://github.com/yoyololicon/kazane/actions/workflows/python-package.yml)
-[![Upload Python Package](https://github.com/yoyololicon/kazane/actions/workflows/python-publish.yml/badge.svg)](https://github.com/yoyololicon/kazane/actions/workflows/python-publish.yml)
+[![build](https://github.com/yoyolicoris/kazane/actions/workflows/ci.yml/badge.svg)](https://github.com/yoyolicoris/kazane/actions/workflows/ci.yml)
+[![Release](https://github.com/yoyolicoris/kazane/actions/workflows/release.yml/badge.svg)](https://github.com/yoyolicoris/kazane/actions/workflows/release.yml)
 [![PyPI version](https://badge.fury.io/py/kazane.svg)](https://badge.fury.io/py/kazane)
 
 Kazane utilize FFT based convolution to provide fast sinc interpolation for 1D signal when your sample rate only needs to change by an integer amounts; If you need to change by a fraction amounts, checkout [julius](https://github.com/adefossez/julius).
@@ -14,7 +14,7 @@ pip install kazane
 ```
 or 
 ``` commandline
-pip install git+https://github.com/yoyololicon/kazane
+pip install git+https://github.com/yoyolicoris/kazane
 ```
 for latest version.
 

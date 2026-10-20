@@ -1,0 +1,47 @@
+name: Release
+
+# Publish to PyPI on version tags, e.g. v1.1.0.
+# The tag IS the version: hatch-vcs derives it from `git describe`, so nothing
+# in the repo declares one. `pixi run smoke` fails the job unless the wheel's
+# version equals the pushed tag, so a mismatch never reaches PyPI.
+# kazane is already on PyPI: add this repo as a trusted publisher on the
+# EXISTING project at https://pypi.org/manage/project/kazane/settings/publishing/
+# (owner yoyolicoris, repo kazane, workflow release.yml, environment pypi)
+# before pushing the tag.
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: prefix-dev/setup-pixi@v0.11.2
+        with:
+          locked: true
+      - run: pixi run lint
+      - run: pixi run format-check
+      - run: pixi run test
+      - run: pixi run build
+      - run: pixi run smoke
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
