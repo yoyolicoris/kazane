@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-Dev env is managed by pixi ([pixi.toml](pixi.toml)); the `kazane` package is installed editable. Environments: `default` (py313, CPU torch, test + dev tools), `py311`..`py314`, `bench` (needs julius), `cuda` (CUDA torch; use for GPU benchmarks).
+Dev env is managed by pixi ([pyproject.toml](pyproject.toml), `[tool.pixi.*]`); the `kazane` package is installed editable. Environments: `default` (py313, CPU torch, test + dev tools), `py311`..`py314`, `bench` (needs julius), `cuda` (CUDA torch; use for GPU benchmarks).
 
 ```bash
 pixi run test                                   # pytest with branch coverage; fails below 100%
@@ -14,7 +14,7 @@ pixi run build && pixi run smoke                # sdist+wheel, then install whee
 pixi run -e bench bench-upsample                # also bench-decimate (designed for CUDA: use -e cuda)
 ```
 
-CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs lint/format-check, the test matrix over py311..py314, and build+smoke, all via pixi with `locked: true` (commit `pixi.lock` with `pixi.toml` changes). The version comes from git tags via hatch-vcs: release by pushing a `v*` tag; [release.yml](.github/workflows/release.yml) publishes to PyPI with trusted publishing. Checkouts need full history (`fetch-depth: 0`).
+CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs lint/format-check, the test matrix over py311..py314, and build+smoke, all via pixi with `locked: true` (commit `pixi.lock` with `[tool.pixi]` changes). The version comes from git tags via hatch-vcs: release by pushing a `v*` tag; [release.yml](.github/workflows/release.yml) publishes to PyPI with trusted publishing. Checkouts need full history (`fetch-depth: 0`).
 
 ## Architecture
 
