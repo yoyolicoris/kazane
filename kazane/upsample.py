@@ -8,46 +8,11 @@ from .fftconv import (
     _custom_fft_conv1d,
     _fft_conv1d_with_spectrum,
     _kernel_spectrum,
+    _manual_reflect_pad,
     _next_pow2,
+    _pad_to_block,
 )
 from .sinc import sinc_kernel
-
-
-def _manual_reflect_pad(x: torch.Tensor, padding: tuple[int, int]):
-    flipped_x = x.flip(-1)
-    tensors = [x]
-    left_padding, right_padding = padding
-    step = False
-    while left_padding > 0:
-        if step:
-            tensors.insert(0, x[..., -left_padding - 1 : -1])
-        else:
-            tensors.insert(0, flipped_x[..., -left_padding - 1 : -1])
-        left_padding -= x.shape[-1] - 1
-        step = not step
-
-    step = False
-    while right_padding > 0:
-        if step:
-            tensors.append(x[..., 1 : right_padding + 1])
-        else:
-            tensors.append(flipped_x[..., 1 : right_padding + 1])
-        right_padding -= x.shape[-1] - 1
-        step = not step
-    x = torch.cat(tensors, -1)
-    return x
-
-
-def _pad_to_block_2(x: torch.Tensor, block_size: int, padding: int):
-    offset = x.shape[-1] % block_size
-    if offset:
-        offset = block_size - offset
-    paddings = (padding, offset + padding)
-    if max(paddings) >= x.shape[-1]:
-        x = _manual_reflect_pad(x, paddings)
-    else:
-        x = F.pad(x, paddings, mode='reflect')
-    return x.unfold(-1, block_size + 2 * padding, block_size)
 
 
 class Upsample(nn.Module):
@@ -108,8 +73,7 @@ class Upsample(nn.Module):
 
         # FFT size is chosen first (power of 2, fastest on both CPU and CUDA),
         # block length follows
-        kernel_len = kernel.shape[-1]
-        self.fft_size = _next_pow2(kernel_len * self.BLOCK_RATIO + 2 * self.padding)
+        self.fft_size = _next_pow2(kernel.shape[-1] * self.BLOCK_RATIO + 2 * self.padding)
         self.block_length = self.fft_size - 2 * self.padding
         # stored as real [P, F, 2] so that .to(dtype) keeps the imaginary part
         self.register_buffer(
@@ -122,21 +86,19 @@ class Upsample(nn.Module):
         shape = x.shape
         x = x.reshape(-1, 1, shape[-1])
 
-        block_length = self.block_length
-        if shape[-1] < block_length:
+        if shape[-1] < self.block_length:
             x = _manual_reflect_pad(x, (self.padding, self.padding))
             y = _custom_fft_conv1d(x, self.kernel)
         else:
-            q = self.kernel.shape[0]
-            x = _pad_to_block_2(x, block_length, self.padding)
+            x = _pad_to_block(x, self.block_length, self.padding)
             num_blocks = x.shape[-2]
             x = x.reshape(-1, 1, x.shape[-1])
             W = torch.view_as_complex(self.kernel_spectrum)
             y = _fft_conv1d_with_spectrum(x, W, self.fft_size, self.kernel.shape[-1])
             y = (
-                y.view(-1, num_blocks, q, block_length)
+                y.view(-1, num_blocks, self.stride, self.block_length)
                 .transpose(1, 2)
-                .reshape(-1, q, num_blocks * block_length)[..., : shape[-1]]
+                .reshape(-1, self.stride, num_blocks * self.block_length)[..., : shape[-1]]
             )
 
         y = y.transpose(1, 2).contiguous()

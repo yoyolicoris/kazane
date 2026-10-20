@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 
 from kazane import Decimate, Upsample
-from kazane.upsample import _manual_reflect_pad
+from kazane.fftconv import _manual_reflect_pad
 
 TOL = 1e-4
 QS = [2, 3, 4, 5, 6, 8]

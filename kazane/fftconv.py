@@ -25,16 +25,10 @@ def _next_pow2(n: int) -> int:
     return m
 
 
-def _fft_size(length: int, stride: int) -> int:
-    # FFT length s >= length with s % (2 * stride) == 0 and s // stride smooth
-    return stride * _smooth_even((length + stride - 1) // stride)
-
-
 def _kernel_spectrum(weight: Tensor, s: int) -> Tensor:
     # Conjugated spectrum of the kernel(s), shape [-1, s // 2 + 1]
     weight = weight.reshape(-1, weight.shape[-1])
     W = rfft(weight, n=s)
-    # W.imag.mul_(-1)
     torch.view_as_real(W)[..., 1].mul_(-1)
     return W
 
@@ -50,8 +44,7 @@ def _fft_conv1d_with_spectrum(
 
     # handle stride
     if stride > 1:
-        n_fft = s
-        new_n_fft = n_fft // stride
+        new_n_fft = s // stride
         step_size = new_n_fft // 2
         strided_Y_size = step_size + 1
 
@@ -84,6 +77,43 @@ def _fft_conv1d_with_spectrum(
 
 def _custom_fft_conv1d(input: Tensor, weight: Tensor, stride: int = 1) -> Tensor:
     kernel_len = weight.shape[-1]
-    s = _fft_size(max(input.shape[-1], kernel_len), stride)
+    # FFT length with s % (2 * stride) == 0 and s // stride smooth
+    s = stride * _smooth_even((max(input.shape[-1], kernel_len) + stride - 1) // stride)
     W = _kernel_spectrum(weight, s)
     return _fft_conv1d_with_spectrum(input, W, s, kernel_len, stride)
+
+
+def _manual_reflect_pad(x: torch.Tensor, padding: tuple[int, int]):
+    flipped_x = x.flip(-1)
+    tensors = [x]
+    left_padding, right_padding = padding
+    step = False
+    while left_padding > 0:
+        if step:
+            tensors.insert(0, x[..., -left_padding - 1 : -1])
+        else:
+            tensors.insert(0, flipped_x[..., -left_padding - 1 : -1])
+        left_padding -= x.shape[-1] - 1
+        step = not step
+
+    step = False
+    while right_padding > 0:
+        if step:
+            tensors.append(x[..., 1 : right_padding + 1])
+        else:
+            tensors.append(flipped_x[..., 1 : right_padding + 1])
+        right_padding -= x.shape[-1] - 1
+        step = not step
+    return torch.cat(tensors, -1)
+
+
+def _pad_to_block(x: torch.Tensor, block_size: int, padding: int):
+    offset = x.shape[-1] % block_size
+    if offset:
+        offset = block_size - offset
+    paddings = (padding, offset + padding)
+    if max(paddings) >= x.shape[-1]:
+        x = _manual_reflect_pad(x, paddings)
+    else:
+        x = F.pad(x, paddings, mode='reflect')
+    return x.unfold(-1, block_size + 2 * padding, block_size)

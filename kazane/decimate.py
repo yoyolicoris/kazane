@@ -7,10 +7,11 @@ from .fftconv import (
     _custom_fft_conv1d,
     _fft_conv1d_with_spectrum,
     _kernel_spectrum,
+    _manual_reflect_pad,
     _next_pow2,
+    _pad_to_block,
 )
 from .sinc import sinc_kernel
-from .upsample import _manual_reflect_pad, _pad_to_block_2
 
 
 class Decimate(nn.Module):
@@ -87,13 +88,12 @@ class Decimate(nn.Module):
         shape = x.shape
         x = x.reshape(-1, 1, shape[-1])
 
-        block_length = self.block_length
         out_size = shape[-1] // self.stride
-        if shape[-1] < block_length:
+        if shape[-1] < self.block_length:
             x = _manual_reflect_pad(x, (self.padding, self.padding))
             y = _custom_fft_conv1d(x, self.kernel, stride=self.stride)
         else:
-            x = _pad_to_block_2(x, block_length, self.padding)
+            x = _pad_to_block(x, self.block_length, self.padding)
             num_blocks = x.shape[-2]
             x = x.reshape(-1, 1, x.shape[-1])
             W = torch.view_as_complex(self.kernel_spectrum)
