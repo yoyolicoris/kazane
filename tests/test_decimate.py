@@ -1,33 +1,12 @@
-from math import log2, pi
-
 import pytest
 import torch
 
 from kazane import Decimate
 
+from helpers import make_sweep, make_tone
+
 device = 'cpu'
 dtype = torch.float64
-
-
-def make_tone(freq, sr, duration):
-    return torch.sin(2 * pi * freq / sr * torch.arange(int(sr * duration), dtype=dtype))
-
-
-def make_sweep(freq, sr, duration):
-    return torch.sin(
-        torch.cumsum(
-            2
-            * pi
-            * torch.logspace(
-                log2(2.0 / sr),
-                log2(float(freq) / sr),
-                steps=int(duration * sr),
-                base=2.0,
-                dtype=dtype,
-            ),
-            dim=-1,
-        )
-    )
 
 
 @pytest.mark.parametrize('q', [2, 3, 5, 7])

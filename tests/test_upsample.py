@@ -3,7 +3,7 @@ import torch
 
 from kazane import Upsample
 
-from .test_decimate import make_sweep, make_tone
+from helpers import make_sweep, make_tone
 
 device = 'cpu'
 dtype = torch.float64
