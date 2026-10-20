@@ -86,18 +86,17 @@ class Decimate(nn.Module):
 
     def forward(self, x: torch.Tensor):
         shape = x.shape
-        x = x.reshape(-1, 1, shape[-1])
+        x = x.reshape(-1, shape[-1])
+        batch = x.shape[0]
 
-        out_size = shape[-1] // self.stride
         if shape[-1] < self.block_length:
-            x = _manual_reflect_pad(x, (self.padding, self.padding))
+            x = _manual_reflect_pad(x[:, None], (self.padding, self.padding))
             y = _custom_fft_conv1d(x, self.kernel, stride=self.stride)
         else:
             x = _pad_to_block(x, self.block_length, self.padding)
-            num_blocks = x.shape[-2]
-            x = x.reshape(-1, 1, x.shape[-1])
             W = torch.view_as_complex(self.kernel_spectrum)
-            y = _fft_conv1d_with_spectrum(x, W, self.fft_size, self.kernel.shape[-1], self.stride)
-            y = y.view(-1, num_blocks * y.shape[-1])[..., :out_size]
-
-        return y.view(shape[:-1] + (-1,))
+            y = _fft_conv1d_with_spectrum(
+                x.reshape(-1, 1, x.shape[-1]), W, self.fft_size, self.kernel.shape[-1], self.stride
+            )
+            y = y.reshape(batch, -1)[:, : shape[-1] // self.stride]
+        return y.reshape(shape[:-1] + (-1,))

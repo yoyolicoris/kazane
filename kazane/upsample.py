@@ -84,22 +84,21 @@ class Upsample(nn.Module):
 
     def forward(self, x: torch.Tensor):
         shape = x.shape
-        x = x.reshape(-1, 1, shape[-1])
+        x = x.reshape(-1, shape[-1])
+        batch = x.shape[0]
 
         if shape[-1] < self.block_length:
-            x = _manual_reflect_pad(x, (self.padding, self.padding))
-            y = _custom_fft_conv1d(x, self.kernel)
+            y = _custom_fft_conv1d(
+                _manual_reflect_pad(x[:, None], (self.padding, self.padding)), self.kernel
+            ).unsqueeze(1)
         else:
             x = _pad_to_block(x, self.block_length, self.padding)
             num_blocks = x.shape[-2]
-            x = x.reshape(-1, 1, x.shape[-1])
             W = torch.view_as_complex(self.kernel_spectrum)
-            y = _fft_conv1d_with_spectrum(x, W, self.fft_size, self.kernel.shape[-1])
-            y = (
-                y.view(-1, num_blocks, self.stride, self.block_length)
-                .transpose(1, 2)
-                .reshape(-1, self.stride, num_blocks * self.block_length)[..., : shape[-1]]
-            )
+            y = _fft_conv1d_with_spectrum(
+                x.reshape(-1, 1, x.shape[-1]), W, self.fft_size, self.kernel.shape[-1]
+            ).view(batch, num_blocks, self.stride, self.block_length)
 
-        y = y.transpose(1, 2).contiguous()
-        return y.view(shape[:-1] + (-1,))
+        # [batch, block, phase, time] -> interleave the phases in time
+        y = y.permute(0, 1, 3, 2).reshape(batch, -1)[:, : shape[-1] * self.stride]
+        return y.reshape(shape[:-1] + (-1,))

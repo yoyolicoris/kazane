@@ -26,53 +26,28 @@ def _next_pow2(n: int) -> int:
 
 
 def _kernel_spectrum(weight: Tensor, s: int) -> Tensor:
-    # Conjugated spectrum of the kernel(s), shape [-1, s // 2 + 1]
+    # Conjugated spectrum of the kernel(s), shape [-1, s // 2 + 1]. It also carries
+    # the 1/s normalisation, so the inverse transform below runs unnormalised.
     weight = weight.reshape(-1, weight.shape[-1])
-    W = rfft(weight, n=s)
-    torch.view_as_real(W)[..., 1].mul_(-1)
-    return W
+    return rfft(weight, n=s).conj() / s
 
 
 def _fft_conv1d_with_spectrum(
     input: Tensor, W: Tensor, s: int, kernel_len: int, stride: int = 1
 ) -> Tensor:
-    # s % (2 * stride) == 0 and input.shape[-1] <= s are required
+    # s % (2 * stride) == 0 and input.shape[-1] <= s are required.
+    # The result is a (possibly non-contiguous) slice of the inverse transform.
     output_size = (input.shape[-1] - (kernel_len - 1) - 1) // stride + 1
 
-    X = rfft(input, n=s)
-    Y = X * W
-
-    # handle stride
+    Y = rfft(input, n=s) * W
     if stride > 1:
-        new_n_fft = s // stride
-        step_size = new_n_fft // 2
-        strided_Y_size = step_size + 1
-
-        tmpY = torch.view_as_real(Y)
-        Y_real, Y_imag = tmpY[..., 0], tmpY[..., 1]
-
-        unfolded_Y_real = Y_real.unfold(-1, strided_Y_size, step_size)
-        unfolded_Y_imag = Y_imag[..., 1:].unfold(-1, strided_Y_size - 2, step_size)
-        Y_pos_real, Y_pos_imag = (
-            unfolded_Y_real[..., ::2, :].sum(-2),
-            unfolded_Y_imag[..., ::2, :].sum(-2),
-        )
-        Y_neg_real, Y_neg_imag = (
-            unfolded_Y_real[..., 1::2, :].sum(-2).flip(-1),
-            unfolded_Y_imag[..., 1::2, :].sum(-2).flip(-1),
-        )
-
-        Y_real = Y_pos_real.add_(Y_neg_real)
-        Y_imag = Y_pos_imag.add_(Y_neg_imag, alpha=-1)
-        Y_imag = F.pad(Y_imag, [1, 1])
-
-        Y = torch.view_as_complex(torch.stack((Y_real, Y_imag), -1)).div_(stride)
-
-    output = irfft(Y, n=s // stride)
-
-    # Remove extra padded values
-    output = output[..., :output_size].contiguous()
-    return output
+        # Decimating by `stride` in time sums `stride` shifted copies of the spectrum,
+        # every other copy mirrored. The unfolded windows overlap by one bin, which is
+        # exactly the bin shared by two neighbouring copies.
+        step = s // stride // 2
+        copies = Y.unfold(-1, step + 1, step)
+        Y = copies[..., ::2, :].sum(-2) + copies[..., 1::2, :].sum(-2).flip(-1).conj()
+    return irfft(Y, n=s // stride, norm='forward')[..., :output_size]
 
 
 def _custom_fft_conv1d(input: Tensor, weight: Tensor, stride: int = 1) -> Tensor:
